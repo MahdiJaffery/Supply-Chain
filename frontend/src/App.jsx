@@ -61,9 +61,10 @@ function App() {
     e.preventDefault();
     if (!contract) return;
     try {
+      const currentNextId = await contract.nextProductId();
       const tx = await contract.registerProduct(regName, regDesc);
       await tx.wait();
-      alert("Product Registered Successfully!");
+      alert(`Product Registered Successfully! Your Product ID is: ${currentNextId}`);
     } catch (err) {
       console.error(err);
       alert("Error registering product!");

@@ -1,0 +1,42 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-cbad76b192cabb705059f0a816636b5ab020c271",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "compilerType": "solc",
+  "userSourceNameMap": {
+    "contracts/jaffri_supplychain.sol": "project/contracts/jaffri_supplychain.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode.linkReferences",
+            "evm.bytecode.object",
+            "evm.bytecode.opcodes",
+            "evm.bytecode.sourceMap",
+            "evm.deployedBytecode.immutableReferences",
+            "evm.deployedBytecode.linkReferences",
+            "evm.deployedBytecode.object",
+            "evm.deployedBytecode.opcodes",
+            "evm.deployedBytecode.sourceMap",
+            "evm.methodIdentifiers"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/jaffri_supplychain.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.20;\n\ncontract jaffri_supplychain {\n    enum Role { Manufacturer, Distributor, Retailer, Customer }\n    enum Status { Manufactured, InTransit, Delivered }\n\n    struct Product {\n        uint256 id;\n        string name;\n        string description;\n        address currentOwner;\n        Role ownerRole;\n        Status status;\n    }\n\n    struct HistoryEntry {\n        address passedFrom;\n        address passedTo;\n        Role newRole;\n        Status newStatus;\n        uint256 timestamp;\n    }\n\n    uint256 public nextProductId;\n    mapping(uint256 => Product) public products;\n    mapping(uint256 => HistoryEntry[]) public productHistory;\n\n    event ProductRegistered(uint256 indexed productId, string name, address indexed owner);\n    event ProductTransferred(uint256 indexed productId, address indexed from, address indexed to, Role newRole, Status newStatus);\n\n    modifier productExists(uint256 _productId) {\n        require(_productId < nextProductId, \"Product does not exist\");\n        _;\n    }\n\n    function registerProduct(string memory _name, string memory _description) public returns (uint256) {\n        uint256 currentId = nextProductId++;\n        \n        products[currentId] = Product({\n            id: currentId,\n            name: _name,\n            description: _description,\n            currentOwner: msg.sender,\n            ownerRole: Role.Manufacturer,\n            status: Status.Manufactured\n        });\n\n        productHistory[currentId].push(HistoryEntry({\n            passedFrom: address(0),\n            passedTo: msg.sender,\n            newRole: Role.Manufacturer,\n            newStatus: Status.Manufactured,\n            timestamp: block.timestamp\n        }));\n\n        emit ProductRegistered(currentId, _name, msg.sender);\n        return currentId;\n    }\n\n    function transferProduct(uint256 _productId, address _newOwner, Role _newRole, Status _newStatus) public productExists(_productId) {\n        Product storage prod = products[_productId];\n        require(prod.currentOwner == msg.sender, \"Only current owner can transfer\");\n        require(prod.status != Status.Delivered, \"Product already delivered\");\n        \n        address prevOwner = prod.currentOwner;\n        prod.currentOwner = _newOwner;\n        prod.ownerRole = _newRole;\n        prod.status = _newStatus;\n\n        productHistory[_productId].push(HistoryEntry({\n            passedFrom: prevOwner,\n            passedTo: _newOwner,\n            newRole: _newRole,\n            newStatus: _newStatus,\n            timestamp: block.timestamp\n        }));\n\n        emit ProductTransferred(_productId, prevOwner, _newOwner, _newRole, _newStatus);\n    }\n\n    function getProductHistory(uint256 _productId) public view productExists(_productId) returns (HistoryEntry[] memory) {\n        return productHistory[_productId];\n    }\n}\n"
+      }
+    }
+  }
+}
